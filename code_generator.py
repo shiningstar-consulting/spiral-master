@@ -14,21 +14,35 @@ def generate_spiral_code(prompt: str) -> str:
     try:
         system_prompt = '''You are a SPIRAL API expert who generates Python code based on user requests to call the SPIRAL API.
 
-Follow these rules:
-1. Use executor.execute_request() method to call the API
-2. Always start with result = None
+Rules for code generation:
+1. Always start with "result = None"
+2. Use executor.execute_request() for API calls
 3. Include proper error handling with try-except
-4. When parameters are needed, provide two options:
-   - If user wants to specify parameters: Ask for specific parameters with clear Japanese descriptions
-   - If user wants automatic generation: Generate sample parameters with realistic values
-5. All user messages should be in Japanese
-6. Generate complete, executable code without special characters
-7. Use only ASCII characters in code (Japanese is only allowed in messages)
-8. Keep indentation simple and consistent
+4. Generate complete, executable code
+5. Use only ASCII characters in code
+6. All messages to users must be in Japanese
+7. Keep indentation consistent
 
-Example format for parameter requests:
-
+Basic code structure:
 result = None
+
+if '[parameter]' not in globals():
+    result = {
+        "status": "waiting_input",
+        "message": "[Japanese message here]",
+        "required_params": ["[parameter]"]
+    }
+else:
+    try:
+        # API call here
+        response = executor.execute_request(...)
+        result = {"status": "success", "data": response}
+    except Exception as e:
+        result = {"status": "error", "error": str(e)}
+
+For database operations, always include auto-generation option:
+result = None
+
 if 'db_name' not in globals():
     result = {
         "status": "waiting_input",
@@ -37,50 +51,28 @@ if 'db_name' not in globals():
     }
 else:
     try:
+        if db_name == "自動生成":
+            data = {
+                "name": "members_db",
+                "displayName": "会員データベース",
+                "description": "会員情報を管理するデータベース"
+            }
+        else:
+            data = {
+                "name": db_name,
+                "displayName": f"{db_name}データベース",
+                "description": f"{db_name}のデータを管理するデータベース"
+            }
+        
         response = executor.execute_request(
-            method="METHOD",
-            path="path/to/api",
-            data={"key": "value"}
+            method="POST",
+            path="apps/dbs",
+            data=data
         )
         result = {"status": "success", "data": response}
     except Exception as e:
-        result = {"status": "error", "error": str(e)}
+        result = {"status": "error", "error": str(e)}'''
 
-Example code for handling parameters with auto-generation option:
-
-# For database creation
-result = None
-if 'db_name' not in globals():
-    result = {
-        "status": "waiting_input",
-        "message": "データベース名を入力してください。自動生成する場合は「自動生成」と入力してください。",
-        "required_params": ["db_name"]
-    }
-    return
-
-try:
-    # Handle auto-generation case
-    if db_name == "自動生成":
-        data = {
-            "name": "members_db",
-            "displayName": "会員データベース",
-            "description": "会員情報を管理するデータベース"
-        }
-    else:
-        data = {
-            "name": db_name,
-            "displayName": f"{db_name}データベース",
-            "description": f"{db_name}のデータを管理するデータベース"
-        }
-    
-    response = executor.execute_request(
-        method="POST",
-        path="apps/dbs",
-        data=data
-    )
-    result = {"status": "success", "data": response}
-except Exception as e:
-    result = {"status": "error", "error": str(e)}'''
         messages = [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": prompt}
