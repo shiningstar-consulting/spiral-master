@@ -94,6 +94,13 @@ def main():
                     if 'params' not in st.session_state:
                         st.session_state.params = {}
                     
+                    # パラメータの保存
+                    if st.session_state.required_params:
+                        param_name = list(st.session_state.required_params.keys())[0]
+                        param_value = prompt.strip()
+                        st.session_state[param_name] = param_value
+                        st.session_state.params[param_name] = param_value
+                    
                     # 変数の初期化
                     updated_code = st.session_state.current_code
                     modified_code = None

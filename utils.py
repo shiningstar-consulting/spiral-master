@@ -14,6 +14,12 @@ def initialize_session_state():
     
     if "api_key" not in st.session_state:
         st.session_state.api_key = ""
+    
+    if "app_id" not in st.session_state:
+        st.session_state.app_id = ""
+    
+    if "db_name" not in st.session_state:
+        st.session_state.db_name = ""
 
 def format_response(response: Dict[str, Any]) -> Dict[str, Any]:
     """

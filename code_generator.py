@@ -48,13 +48,13 @@ Rules for code generation:
 Basic code structure for database operations:
 result = None
 
-if 'app_id' not in globals():
+if not st.session_state.get('app_id'):
     result = {
         "status": "waiting_input",
         "message": "アプリIDを入力してください。",
         "required_params": ["app_id"]
     }
-elif 'db_name' not in globals():
+elif not st.session_state.get('db_name'):
     result = {
         "status": "waiting_input",
         "message": "データベース名を入力してください。自動生成する場合は「自動生成」と入力してください。",
