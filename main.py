@@ -84,12 +84,8 @@ def main():
                             try:
                                 executor = SPIRALAPIExecutor(st.session_state.api_endpoint, st.session_state.api_key)
                                 local_vars = {"st": st}
-                                code_to_exec = f"""
-import streamlit as st
-{st.session_state.final_code}
-"""
-                                exec(code_to_exec, {"executor": executor, "st": st, "result": None}, local_vars)
-                                response = local_vars.get("result")
+                                exec(st.session_state.final_code, {"executor": executor, "st": st, "result": None}, local_vars)
+                                response = local_vars.get("result", {})
                                 formatted_response = format_response(response)
                                 st.session_state.messages.append({
                                     "role": "assistant",
@@ -137,14 +133,14 @@ import streamlit as st
                         for param, value in st.session_state.params.items():
                             updated_code = updated_code.replace(f'"{param}"', f'"{value}"')
                         
-                        st.markdown("パラメータを適用したコードです:")
-                        st.code(updated_code, language="python")
-                        
                         # まだ必要なパラメータが残っているか確認
                         st.session_state.required_params.pop(param_name)
                         if st.session_state.required_params:
                             next_param = list(st.session_state.required_params.keys())[0]
-                            st.info(f"{next_param}を入力してください。")
+                            st.session_state.messages.append({
+                                "role": "assistant",
+                                "content": f"{next_param}を入力してください。"
+                            })
                         else:
                             st.session_state.messages.append({
                                 "role": "assistant",
@@ -154,9 +150,7 @@ import streamlit as st
                             })
                     else:
                         # 修正要求の処理
-                        st.markdown("修正要求を反映したコードを生成します...")
                         modified_code = generate_spiral_code(prompt)
-                        st.code(modified_code, language="python")
                         st.session_state.messages.append({
                             "role": "assistant",
                             "content": "コードを修正しました。このコードを実行してよろしいですか？",
