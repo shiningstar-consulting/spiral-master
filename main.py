@@ -135,6 +135,9 @@ def main():
         st.text_input("API エンドポイント", value=st.session_state.api_endpoint, key="api_endpoint")
         st.text_input("API キー", value=st.session_state.api_key, key="api_key", type="password")
 
+    # チャット
+    st.header("チャット")
+
     # チャット表示
     display_messages()
 
