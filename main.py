@@ -65,11 +65,22 @@ def main():
                 try:
                     # SPIRALAPIExecutorのインスタンスを作成
                     executor = SPIRALAPIExecutor(st.session_state.api_endpoint, st.session_state.api_key)
-                    # グローバル変数に値を設定
-                    globals()[param_name] = prompt.strip()
+                
+                    # 現在のパラメータを保存
+                    if 'params' not in st.session_state:
+                        st.session_state.params = {}
+                    st.session_state.params[param_name] = prompt.strip()
+                
+                    # 実行環境の準備
+                    exec_globals = {
+                        "executor": executor,
+                        "result": None,
+                        **st.session_state.params
+                    }
+                
                     # コードを実行
                     local_vars = {}
-                    exec(st.session_state.current_code, {"executor": executor, "result": None, param_name: prompt.strip()}, local_vars)
+                    exec(st.session_state.current_code, exec_globals, local_vars)
                     response = local_vars.get("result")
                     
                     # レスポンスの処理
@@ -91,10 +102,7 @@ def main():
                         # 状態をクリア
                         st.session_state.current_code = None
                         st.session_state.required_params = {}
-                        
-                        # グローバル変数から入力パラメータをクリア
-                        if param_name in globals():
-                            del globals()[param_name]
+                        st.session_state.params = {}
                         
                         # 完了メッセージを表示
                         completion_message = "データベースの作成が完了しました。" if "success" in formatted_response["status"] else "処理が完了しましたが、エラーが発生しました。"
@@ -112,6 +120,7 @@ def main():
                     })
                     st.session_state.current_code = None
                     st.session_state.required_params = {}
+                    st.session_state.params = {}
         
         # 新しいコマンドの場合
         else:
