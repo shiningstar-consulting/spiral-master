@@ -143,6 +143,7 @@ def main():
                                 "code": updated_code,
                                 "is_final": True
                             })
+                            st.experimental_rerun()
                     else:
                         # 修正要求の処理
                         modified_code = generate_spiral_code(prompt)
@@ -234,15 +235,34 @@ def main():
                             "code": generated_code
                         })
                     else:
-                        # コードの準備完了
-                        st.session_state.show_execute_button = True
-                        st.session_state.final_code = generated_code
-                        st.session_state.messages.append({
-                            "role": "assistant",
-                            "content": "コードの準備ができました。実行してよろしいですか？",
-                            "code": generated_code,
-                            "is_final": True
-                        })
+                        # パラメータ入力が必要かどうかの静的チェック
+                        if "app_id" in generated_code and not st.session_state.get("app_id"):
+                            message = "アプリIDを入力してください。"
+                            st.info(message)
+                            st.session_state.current_code = generated_code
+                            st.session_state.required_params = {"app_id": None}
+                            st.session_state.messages.append({
+                                "role": "assistant",
+                                "content": message
+                            })
+                        elif "db_name" in generated_code and not st.session_state.get("db_name"):
+                            message = "データベース名を入力してください。"
+                            st.info(message)
+                            st.session_state.current_code = generated_code
+                            st.session_state.required_params = {"db_name": None}
+                            st.session_state.messages.append({
+                                "role": "assistant",
+                                "content": message
+                            })
+                        else:
+                            # コードの準備完了
+                            st.session_state.current_code = generated_code
+                            st.session_state.messages.append({
+                                "role": "assistant",
+                                "content": "全てのパラメータが入力されました。このコードを実行してよろしいですか？",
+                                "code": generated_code,
+                                "is_final": True
+                            })
                     
                 except Exception as e:
                     st.error(f"エラーが発生しました: {str(e)}")
