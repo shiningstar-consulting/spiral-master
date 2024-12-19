@@ -1,0 +1,93 @@
+会員DBを作ってほしい。フィールド構成は適当に必要そうなものを作って
+
+アプリIDを入力してください。
+
+result = None
+
+if 'app_id' not in globals():
+    result = {
+        "status": "waiting_input",
+        "message": "アプリIDを入力してください。",
+        "required_params": ["app_id"]
+    }
+elif 'db_name' not in globals():
+    result = {
+        "status": "waiting_input",
+        "message": "データベース名を入力してください。自動生成する場合は「自動生成」と入力してください。",
+        "required_params": ["db_name"]
+    }
+else:
+    try:
+        data = {
+            "name": "members_db",
+            "displayName": "会員データベース",
+            "description": "会員情報を管理するデータベース",
+            "fields": [
+                {"name": "member_id", "type": "text", "size": 128, "displayName": "会員ID"},
+                {"name": "name", "type": "text", "size": 128, "displayName": "名前"},
+                {"name": "email", "type": "email", "size": 256, "displayName": "メールアドレス"},
+                {"name": "phone", "type": "phone", "size": 19, "displayName": "電話番号"},
+                {"name": "address", "type": "textarea", "size": 1024, "displayName": "住所"},
+                {"name": "join_date", "type": "date", "size": 4, "displayName": "入会日"},
+                {"name": "birth_date", "type": "date", "size": 4, "displayName": "生年月日"},
+                {"name": "membership_type", "type": "select", "size": 8, "displayName": "会員種別"},
+                {"name": "notes", "type": "textarea", "size": 1024, "displayName": "備考"}
+            ]
+        }
+
+        response = executor.execute_request(
+            method="POST",
+            path=f"apps/{app_id}/dbs",
+            data=data
+        )
+        result = {"status": "success", "data": response}
+    except Exception as e:
+        result = {"status": "error", "error": str(e)}
+
+30232
+
+パラメータを適用したコードです:
+
+result = None
+
+if 'app_id' not in globals():
+    result = {
+        "status": "waiting_input",
+        "message": "アプリIDを入力してください。",
+        "required_params": ["30232"]
+    }
+elif 'db_name' not in globals():
+    result = {
+        "status": "waiting_input",
+        "message": "データベース名を入力してください。自動生成する場合は「自動生成」と入力してください。",
+        "required_params": ["db_name"]
+    }
+else:
+    try:
+        data = {
+            "name": "members_db",
+            "displayName": "会員データベース",
+            "description": "会員情報を管理するデータベース",
+            "fields": [
+                {"name": "member_id", "type": "text", "size": 128, "displayName": "会員ID"},
+                {"name": "name", "type": "text", "size": 128, "displayName": "名前"},
+                {"name": "email", "type": "email", "size": 256, "displayName": "メールアドレス"},
+                {"name": "phone", "type": "phone", "size": 19, "displayName": "電話番号"},
+                {"name": "address", "type": "textarea", "size": 1024, "displayName": "住所"},
+                {"name": "join_date", "type": "date", "size": 4, "displayName": "入会日"},
+                {"name": "birth_date", "type": "date", "size": 4, "displayName": "生年月日"},
+                {"name": "membership_type", "type": "select", "size": 8, "displayName": "会員種別"},
+                {"name": "notes", "type": "textarea", "size": 1024, "displayName": "備考"}
+            ]
+        }
+
+        response = executor.execute_request(
+            method="POST",
+            path=f"apps/{app_id}/dbs",
+            data=data
+        )
+        result = {"status": "success", "data": response}
+    except Exception as e:
+        result = {"status": "error", "error": str(e)}
+
+エラーが発生しました: cannot access local variable 'modified_code' where it is not associated with a value
