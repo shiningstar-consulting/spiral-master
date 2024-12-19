@@ -134,43 +134,46 @@ def main():
                     st.session_state.current_code = updated_code if st.session_state.required_params else modified_code
                     
                     # レスポンスの処理
-                    if isinstance(response, dict) and response.get("status") == "waiting_input":
-                        # まだ追加のパラメータが必要な場合
-                        message = response.get("message", "追加の入力が必要です")
-                        st.info(message)
-                        st.session_state.required_params = {p: None for p in response.get("required_params", [])}
+                    try:
+                        # コードの実行テスト（実際の実行はボタンクリック時）
+                        executor = SPIRALAPIExecutor(st.session_state.api_endpoint, st.session_state.api_key)
+                        test_vars = {}
+                        current_code = st.session_state.current_code
+                        exec(current_code, {"executor": executor, "result": None}, test_vars)
+                        response = test_vars.get("result")
+
+                        if isinstance(response, dict) and response.get("status") == "waiting_input":
+                            # まだ追加のパラメータが必要な場合
+                            message = response.get("message", "追加の入力が必要です")
+                            st.info(message)
+                            st.session_state.required_params = {p: None for p in response.get("required_params", [])}
+                            st.session_state.messages.append({
+                                "role": "assistant",
+                                "content": message
+                            })
+                        else:
+                            # コードの準備完了
+                            st.session_state.messages.append({
+                                "role": "assistant",
+                                "content": "コードの準備ができました。実行してよろしいですか？",
+                                "code": current_code,
+                                "is_final": True
+                            })
+                            st.session_state.show_execute_button = True
+                            st.session_state.final_code = current_code
+                            
+                    except Exception as e:
+                        st.error(f"コードの検証中にエラーが発生しました: {str(e)}")
                         st.session_state.messages.append({
                             "role": "assistant",
-                            "content": message
+                            "content": f"エラーが発生しました: {str(e)}"
                         })
-                    else:
-                        # 実行完了
-                        formatted_response = format_response(response)
-                        st.markdown("### 実行結果:")
-                        st.json(formatted_response)
-                        
-                        # 状態をクリア
-                        st.session_state.current_code = None
-                        st.session_state.required_params = {}
-                        st.session_state.params = {}
-                        
-                        # 完了メッセージを表示
-                        completion_message = "データベースの作成が完了しました。" if "success" in formatted_response["status"] else "処理が完了しましたが、エラーが発生しました。"
-                        st.session_state.messages.append({
-                            "role": "assistant",
-                            "content": completion_message,
-                            "response": formatted_response
-                        })
-                        
                 except Exception as e:
                     st.error(f"エラーが発生しました: {str(e)}")
                     st.session_state.messages.append({
                         "role": "assistant",
                         "content": f"エラーが発生しました: {str(e)}"
                     })
-                    st.session_state.current_code = None
-                    st.session_state.required_params = {}
-                    st.session_state.params = {}
         
         # 新しいコマンドの場合
         else:
@@ -184,14 +187,11 @@ def main():
                     st.markdown("生成されたコードです:")
                     st.code(generated_code, language="python")
                     
-                    # コード実行
-                    with st.spinner("APIを実行中..."):
-                        # SPIRALAPIExecutorのインスタンスを作成
-                        executor = SPIRALAPIExecutor(st.session_state.api_endpoint, st.session_state.api_key)
-                        # 生成されたコードをローカル変数として実行
-                        local_vars = {}
-                        exec(generated_code, {"executor": executor, "result": None}, local_vars)
-                        response = local_vars.get("result")
+                    # コードの検証
+                    executor = SPIRALAPIExecutor(st.session_state.api_endpoint, st.session_state.api_key)
+                    test_vars = {}
+                    exec(generated_code, {"executor": executor, "result": None}, test_vars)
+                    response = test_vars.get("result")
                     
                     # レスポンスの処理
                     if isinstance(response, dict) and response.get("status") == "waiting_input":
@@ -206,15 +206,14 @@ def main():
                             "code": generated_code
                         })
                     else:
-                        # 実行完了
-                        formatted_response = format_response(response)
-                        st.markdown("### 実行結果:")
-                        st.json(formatted_response)
+                        # コードの準備完了
+                        st.session_state.show_execute_button = True
+                        st.session_state.final_code = generated_code
                         st.session_state.messages.append({
                             "role": "assistant",
-                            "content": "処理が完了しました。",
+                            "content": "コードの準備ができました。実行してよろしいですか？",
                             "code": generated_code,
-                            "response": formatted_response
+                            "is_final": True
                         })
                     
                 except Exception as e:
