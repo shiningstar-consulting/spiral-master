@@ -71,10 +71,15 @@ def main():
                         st.session_state.params = {}
                     st.session_state.params[param_name] = prompt.strip()
                 
-                    # 実行環境の準備
+                    # コンテキストを維持するため、以前の実行結果も保持
+                    if 'execution_context' not in st.session_state:
+                        st.session_state.execution_context = {}
+                    
+                    # 実行環境の準備（以前のコンテキストを維持）
                     exec_globals = {
                         "executor": executor,
                         "result": None,
+                        **st.session_state.execution_context,
                         **st.session_state.params
                     }
                 
