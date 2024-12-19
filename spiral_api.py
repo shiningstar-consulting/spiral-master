@@ -18,6 +18,20 @@ class SPIRALAPIExecutor:
         })
 
     def execute_request(self, method: str, path: str, data: Dict[str, Any] = None) -> Dict[str, Any]:
+        """
+        SPIRAL APIリクエストを実行
+        
+        Args:
+            method: HTTPメソッド
+            path: APIパス
+            data: リクエストデータ（オプション）
+            
+        Returns:
+            Dict[str, Any]: APIレスポンス
+            
+        Raises:
+            Exception: APIリクエストが失敗した場合
+        """
         url = f"{self.endpoint.rstrip('/')}/{path.lstrip('/')}"
         
         try:
@@ -31,14 +45,34 @@ class SPIRALAPIExecutor:
                 json=data if data else None
             )
             
+            # レスポンスの詳細なログ
+            logger.info(f"Response status code: {response.status_code}")
+            logger.info(f"Response headers: {dict(response.headers)}")
+            
+            try:
+                response_data = response.json()
+                logger.info(f"Response data: {json.dumps(response_data, indent=2)}")
+            except json.JSONDecodeError:
+                logger.warning(f"Non-JSON response: {response.text}")
+                raise Exception("Invalid JSON response from API")
+            
             response.raise_for_status()
-            return response.json()
+            return response_data
 
         except requests.exceptions.RequestException as e:
-            logger.error(f"API request failed: {str(e)}")
-            if hasattr(e.response, 'text'):
-                logger.error(f"Response text: {e.response.text}")
-            raise Exception(f"API request failed: {str(e)}")
+            error_message = f"API request failed: {str(e)}"
+            if hasattr(e, 'response') and e.response is not None:
+                try:
+                    error_detail = e.response.json()
+                    error_message = f"{error_message}\nAPI Error: {json.dumps(error_detail, indent=2)}"
+                except json.JSONDecodeError:
+                    error_message = f"{error_message}\nResponse text: {e.response.text}"
+            
+            logger.error(error_message)
+            raise Exception(error_message)
+        except Exception as e:
+            logger.error(f"Unexpected error: {str(e)}")
+            raise
 
 def execute_code(code: str, endpoint: str, api_key: str) -> Dict[str, Any]:
     """
@@ -51,15 +85,16 @@ def execute_code(code: str, endpoint: str, api_key: str) -> Dict[str, Any]:
         # 実行環境の準備
         executor = SPIRALAPIExecutor(endpoint, api_key)
         
-        # ローカル環境を準備
-        local_env = {
+        # グローバル環境とローカル環境を準備
+        global_env = {
             "executor": executor,
             "requests": requests,
             "json": json
         }
+        local_env = {}
         
         # コードの実行
-        exec(code, local_env)
+        exec(code, global_env, local_env)
         
         # 実行結果を取得
         if "result" in local_env:

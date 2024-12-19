@@ -19,16 +19,23 @@ def generate_spiral_code(prompt: str) -> str:
 1. executor.execute_request() メソッドを使用してAPIを呼び出す
 2. 結果は必ず'result'変数に代入する
 3. エラーハンドリングを適切に行う
-4. コードは完全な形で、実行可能である必要がある
-5. レスポンスは適切に整形する
+4. パラメータが不足している場合は、st.text_input()やst.selectbox()を使用してユーザーに入力を求める
+5. コードは完全な形で、実行可能である必要がある
+6. レスポンスは適切に整形する
 
-コード例：
+# 必要なパラメータをユーザーに確認するコード例：
+app_id = st.text_input("アプリIDを入力してください")
+if not app_id:
+    result = {
+        "status": "waiting_input",
+        "message": "アプリIDが必要です"
+    }
+    return
 
-# アプリ一覧を取得する場合
 try:
     response = executor.execute_request(
         method="GET",
-        path="apps",
+        path=f"apps/{app_id}",
         data=None
     )
     result = {
@@ -41,12 +48,21 @@ except Exception as e:
         "error": str(e)
     }
 
-# 特定のアプリの情報を取得する場合
+# 複数のパラメータが必要な場合のコード例：
+db_id = st.text_input("データベースIDを入力してください")
+record_id = st.text_input("レコードIDを入力してください")
+
+if not db_id or not record_id:
+    result = {
+        "status": "waiting_input",
+        "message": "データベースIDとレコードIDが必要です"
+    }
+    return
+
 try:
-    app_id = "your_app_id"
     response = executor.execute_request(
         method="GET",
-        path=f"apps/{app_id}",
+        path=f"apps/{app_id}/dbs/{db_id}/records/{record_id}",
         data=None
     )
     result = {
