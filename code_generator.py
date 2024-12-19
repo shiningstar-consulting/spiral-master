@@ -25,6 +25,9 @@ Follow these rules:
 
 Example code for handling missing parameters:
 ```python
+# Initialize result variable
+result = None
+
 # Example 1: Single parameter check
 if 'app_id' not in globals():
     result = {
@@ -51,8 +54,10 @@ except Exception as e:
     }
 ```
 
-Example code for multiple parameters:
+Complete code example:
 ```python
+# Initialize result variable
+result = None
 # Example 2: Multiple parameter check
 if 'app_id' not in globals():
     result = {
