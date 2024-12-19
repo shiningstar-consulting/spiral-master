@@ -26,32 +26,39 @@ def format_response(response: Dict[str, Any]) -> Dict[str, Any]:
     APIレスポンスを見やすく整形
     """
     try:
+        # 文字列の場合はJSONとしてパース
         if isinstance(response, str):
-            response = json.loads(response)
+            try:
+                response = json.loads(response)
+            except json.JSONDecodeError:
+                # JSON解析に失敗した場合は文字列としてそのまま扱う
+                response = {"message": response}
+        
+        # 辞書でない場合は辞書に変換
+        if not isinstance(response, dict):
+            response = {"data": response}
         
         # エラーレスポンスの場合
-        if isinstance(response, dict) and "error" in response:
+        if "error" in response:
             return {
                 "status": "error",
-                "error": response["error"],
-                "details": response.get("details", "No additional details")
+                "error": str(response["error"]),
+                "details": str(response.get("details", "No additional details"))
             }
+        
+        # 待機レスポンスの場合
+        if "status" in response and response["status"] == "waiting_input":
+            return response
         
         # 成功レスポンスの場合
         return {
             "status": "success",
-            "data": response
+            "data": response.get("data", response)
         }
         
-    except json.JSONDecodeError:
-        return {
-            "status": "error",
-            "error": "Invalid JSON response",
-            "raw_response": response
-        }
     except Exception as e:
         return {
             "status": "error",
             "error": f"Response formatting error: {str(e)}",
-            "raw_response": response
+            "data": str(response)
         }

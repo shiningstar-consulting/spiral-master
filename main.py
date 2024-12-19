@@ -85,16 +85,23 @@ def main():
                                 executor = SPIRALAPIExecutor(st.session_state.api_endpoint, st.session_state.api_key)
                                 local_vars = {"st": st}
                                 exec(st.session_state.final_code, {"executor": executor, "st": st, "result": None}, local_vars)
-                                response = local_vars.get("result", {})
-                                if not isinstance(response, dict):
-                                    response = {"data": response}
-                                formatted_response = format_response(response)
+                                response = local_vars.get("result")
+                                
+                                # レスポンスを整形
+                                if response is None:
+                                    formatted_response = {"status": "success", "data": "No response"}
+                                else:
+                                    formatted_response = format_response(response)
+                                
+                                # 最終メッセージを削除して新しいメッセージを追加
                                 st.session_state.messages = [m for m in st.session_state.messages if not m.get("is_final")]
                                 st.session_state.messages.append({
                                     "role": "assistant",
                                     "content": "実行が完了しました。",
                                     "response": formatted_response
                                 })
+                                
+                                # 実行完了フラグをリセット
                                 st.session_state.show_execute_button = False
                                 st.session_state.final_code = None
                                 st.experimental_rerun()
