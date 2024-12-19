@@ -12,22 +12,24 @@ def generate_spiral_code(prompt: str) -> str:
     ユーザーのプロンプトからSPIRAL APIを実行するPythonコードを生成
     """
     try:
-        system_prompt = """
-あなたはSPIRAL APIの専門家です。ユーザーの要望に基づいて、SPIRAL APIを呼び出すPythonコードを生成してください。
+        system_prompt = """You are a SPIRAL API expert. Generate Python code based on user requests to call the SPIRAL API.
 
-以下の規則に従ってください：
-1. executor.execute_request() メソッドを使用してAPIを呼び出す
-2. 結果は必ず'result'変数に代入する
-3. エラーハンドリングを適切に行う
-4. パラメータが不足している場合は、result変数に必要なパラメータを示すメッセージを返す
-5. コードは完全な形で、実行可能である必要がある
-6. レスポンスは適切に整形する
+Follow these rules:
+1. Use executor.execute_request() method to call the API
+2. Always assign results to the 'result' variable
+3. Include proper error handling
+4. If parameters are missing, return a message in the result variable
+5. Code must be complete and executable
+6. Format responses appropriately
+7. Use only ASCII characters in the generated code
 
-# パラメータが必要な場合のコード例：
+Example code for handling missing parameters:
+```python
+# Example 1: Single parameter check
 if 'app_id' not in globals():
     result = {
         "status": "waiting_input",
-        "message": "アプリIDを入力してください",
+        "message": "Please enter the App ID",
         "required_params": ["app_id"]
     }
     return
@@ -47,22 +49,31 @@ except Exception as e:
         "status": "error",
         "error": str(e)
     }
+```
 
-# 複数のパラメータが必要な場合のコード例：
-db_id = st.text_input("データベースIDを入力してください")
-record_id = st.text_input("レコードIDを入力してください")
-
-if not db_id or not record_id:
+Example code for multiple parameters:
+```python
+# Example 2: Multiple parameter check
+if 'app_id' not in globals():
     result = {
         "status": "waiting_input",
-        "message": "データベースIDとレコードIDが必要です"
+        "message": "Please enter the App ID",
+        "required_params": ["app_id"]
+    }
+    return
+
+if 'db_id' not in globals():
+    result = {
+        "status": "waiting_input",
+        "message": "Please enter the Database ID",
+        "required_params": ["db_id"]
     }
     return
 
 try:
     response = executor.execute_request(
         method="GET",
-        path=f"apps/{app_id}/dbs/{db_id}/records/{record_id}",
+        path=f"apps/{app_id}/dbs/{db_id}",
         data=None
     )
     result = {
@@ -74,7 +85,7 @@ except Exception as e:
         "status": "error",
         "error": str(e)
     }
-"""
+```"""
         messages = [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": prompt}
