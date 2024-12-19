@@ -41,14 +41,54 @@ def main():
     # チャットインターフェースの設定
     st.header("チャット")
     
-    # メッセージ履歴の表示
+    # メッセージを分類
+    regular_messages = []
+    final_message = None
+    
     for message in st.session_state.messages:
+        if message.get("is_final"):
+            final_message = message
+        else:
+            regular_messages.append(message)
+    
+    # 通常のメッセージを表示
+    for message in regular_messages:
         with st.chat_message(message["role"]):
             st.write(message["content"])
             if "code" in message:
                 st.code(message["code"], language="python")
             if "response" in message:
                 st.json(message["response"])
+    
+    # 最終メッセージを表示（実行ボタン付き）
+    if final_message:
+        with st.chat_message(final_message["role"]):
+            st.write(final_message["content"])
+            if "code" in final_message:
+                st.code(final_message["code"], language="python")
+                button_key = f"execute_{len(st.session_state.messages)}_{int(time.time())}"
+                if st.button("このコードを実行する", key=button_key):
+                    with st.spinner("APIを実行中..."):
+                        try:
+                            executor = SPIRALAPIExecutor(st.session_state.api_endpoint, st.session_state.api_key)
+                            local_vars = {"st": st}
+                            exec(final_message["code"], {"executor": executor, "st": st, "result": None}, local_vars)
+                            response = local_vars.get("result")
+                            
+                            # レスポンスを整形
+                            formatted_response = format_response(response)
+                            
+                            # 最終メッセージを削除して新しいメッセージを追加
+                            st.session_state.messages = [m for m in st.session_state.messages if not m.get("is_final")]
+                            st.session_state.messages.append({
+                                "role": "assistant",
+                                "content": "実行が完了しました。",
+                                "response": formatted_response
+                            })
+                            
+                            st.experimental_rerun()
+                        except Exception as e:
+                            st.error(f"実行エラー: {str(e)}")
     
     # ユーザー入力
     if prompt := st.chat_input("SPIRALに実行したい操作を入力してください"):
@@ -119,6 +159,9 @@ def main():
                     try:
                         current_code = st.session_state.current_code
                         
+                        # 既存の最終メッセージを削除
+                        st.session_state.messages = [m for m in st.session_state.messages if not m.get("is_final")]
+                        
                         # パラメータ入力が必要かどうかの静的チェック
                         if "app_id" in current_code and not st.session_state.get("app_id"):
                             message = "アプリIDを入力してください。"
@@ -140,12 +183,10 @@ def main():
                             # すべてのパラメータが揃っている場合、実行準備完了
                             st.session_state.messages.append({
                                 "role": "assistant",
-                                "content": "生成されたコードです。実行する準備ができました。",
+                                "content": "全てのパラメータが入力されました。このコードを実行してよろしいですか？",
                                 "code": current_code,
                                 "is_final": True
                             })
-                            st.session_state.show_execute_button = True
-                            st.session_state.final_code = current_code
                             
                     except Exception as e:
                         st.error(f"コードの検証中にエラーが発生しました: {str(e)}")
