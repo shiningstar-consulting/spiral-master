@@ -1,7 +1,7 @@
 import streamlit as st
 import json
 from code_generator import generate_spiral_code
-from spiral_api import execute_code
+from spiral_api import execute_code, SPIRALAPIExecutor
 from utils import format_response, initialize_session_state
 
 st.set_page_config(
@@ -64,13 +64,13 @@ def main():
             # アシスタントの応答を生成
             with st.chat_message("assistant"):
                 try:
+                    # SPIRALAPIExecutorのインスタンスを作成
+                    executor = SPIRALAPIExecutor(st.session_state.api_endpoint, st.session_state.api_key)
                     # コードを実行
                     exec(f"{param_name} = '{prompt.strip()}'", globals())
-                    response = execute_code(
-                        st.session_state.current_code,
-                        st.session_state.api_endpoint,
-                        st.session_state.api_key
-                    )
+                    local_vars = {}
+                    exec(st.session_state.current_code, {"executor": executor, "result": None}, local_vars)
+                    response = local_vars.get("result")
                     
                     # レスポンスの処理
                     if isinstance(response, dict) and response.get("status") == "waiting_input":
@@ -118,6 +118,8 @@ def main():
                     
                     # コード実行
                     with st.spinner("APIを実行中..."):
+                        # SPIRALAPIExecutorのインスタンスを作成
+                        executor = SPIRALAPIExecutor(st.session_state.api_endpoint, st.session_state.api_key)
                         # 生成されたコードをローカル変数として実行
                         local_vars = {}
                         exec(generated_code, {"executor": executor, "result": None}, local_vars)
