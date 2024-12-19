@@ -68,20 +68,29 @@ def main():
                 st.code(final_message["code"], language="python")
                 # 実行ボタンを表示
                 button_key = f"execute_{len(st.session_state.messages)}_{int(time.time())}"
-                if st.button("このコードを実行する", key=button_key, use_container_width=True):
+                execute_button = st.button("このコードを実行する", key=button_key, use_container_width=True)
+                
+                if execute_button:
                     with st.spinner("APIを実行中..."):
                         try:
+                            # 実行前にセッション状態をクリア
                             executor = SPIRALAPIExecutor(st.session_state.api_endpoint, st.session_state.api_key)
+                            st.session_state["executing"] = True
+                            
+                            # コードを実行
                             local_vars = {"st": st}
                             exec(final_message["code"], {"executor": executor, "st": st, "result": None}, local_vars)
                             response = local_vars.get("result")
+                            
+                            # セッション状態を更新
                             st.session_state.current_code = None
                             st.session_state.required_params = {}
+                            st.session_state["executing"] = False
                             
                             # レスポンスを整形
                             formatted_response = format_response(response)
                             
-                            # 最終メッセージを削除して新しいメッセージを追加
+                            # メッセージを更新
                             st.session_state.messages = [m for m in st.session_state.messages if not m.get("is_final")]
                             st.session_state.messages.append({
                                 "role": "assistant",
@@ -89,6 +98,7 @@ def main():
                                 "response": formatted_response
                             })
                             
+                            # 強制的にページを再読み込み
                             st.rerun()
                         except Exception as e:
                             st.error(f"実行エラー: {str(e)}")
@@ -170,24 +180,25 @@ def main():
                         st.session_state.messages = [m for m in st.session_state.messages if not m.get("is_final")]
                         
                         # パラメータ入力が必要かどうかの静的チェック
-                        if "app_id" in current_code and not st.session_state.get("app_id"):
-                            message = "アプリIDを入力してください。"
-                            st.info(message)
-                            st.session_state.required_params = {"app_id": None}
-                            st.session_state.messages.append({
-                                "role": "assistant",
-                                "content": message
-                            })
-                            return
-                        elif "db_name" in current_code and not st.session_state.get("db_name"):
-                            message = "データベース名を入力してください。自動生成する場合は「自動生成」と入力してください。"
-                            st.info(message)
-                            st.session_state.required_params = {"db_name": None}
-                            st.session_state.messages.append({
-                                "role": "assistant",
-                                "content": message
-                            })
-                            return
+                        if "app_id" in current_code or "db_name" in current_code:
+                            if not st.session_state.get("app_id") and "app_id" in current_code:
+                                message = "アプリIDを入力してください。"
+                                st.info(message)
+                                st.session_state.required_params = {"app_id": None}
+                                st.session_state.messages.append({
+                                    "role": "assistant",
+                                    "content": message
+                                })
+                                return
+                            if not st.session_state.get("db_name") and "db_name" in current_code:
+                                message = "データベース名を入力してください。自動生成する場合は「自動生成」と入力してください。"
+                                st.info(message)
+                                st.session_state.required_params = {"db_name": None}
+                                st.session_state.messages.append({
+                                    "role": "assistant",
+                                    "content": message
+                                })
+                                return
                         else:
                             # すべてのパラメータが揃っている場合、実行準備完了
                             final_message = {
@@ -243,24 +254,27 @@ def main():
                         })
                     else:
                         # パラメータ入力が必要かどうかの静的チェック
-                        if "app_id" in generated_code and not st.session_state.get("app_id"):
-                            message = "アプリIDを入力してください。"
-                            st.info(message)
-                            st.session_state.current_code = generated_code
-                            st.session_state.required_params = {"app_id": None}
-                            st.session_state.messages.append({
-                                "role": "assistant",
-                                "content": message
-                            })
-                        elif "db_name" in generated_code and not st.session_state.get("db_name"):
-                            message = "データベース名を入力してください。"
-                            st.info(message)
-                            st.session_state.current_code = generated_code
-                            st.session_state.required_params = {"db_name": None}
-                            st.session_state.messages.append({
-                                "role": "assistant",
-                                "content": message
-                            })
+                        if "app_id" in generated_code or "db_name" in generated_code:
+                            if not st.session_state.get("app_id") and "app_id" in generated_code:
+                                message = "アプリIDを入力してください。"
+                                st.info(message)
+                                st.session_state.current_code = generated_code
+                                st.session_state.required_params = {"app_id": None}
+                                st.session_state.messages.append({
+                                    "role": "assistant",
+                                    "content": message
+                                })
+                                return
+                            if not st.session_state.get("db_name") and "db_name" in generated_code:
+                                message = "データベース名を入力してください。自動生成する場合は「自動生成」と入力してください。"
+                                st.info(message)
+                                st.session_state.current_code = generated_code
+                                st.session_state.required_params = {"db_name": None}
+                                st.session_state.messages.append({
+                                    "role": "assistant",
+                                    "content": message
+                                })
+                                return
                         else:
                             # コードの準備完了
                             st.session_state.current_code = generated_code
