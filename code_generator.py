@@ -45,7 +45,15 @@ else:
             data = {
                 "name": "members_db",
                 "displayName": "会員データベース",
-                "description": "会員情報を管理するデータベース"
+                "description": "会員情報を管理するデータベース",
+                "fields": [
+                    {"name": "member_id", "type": "text", "size": 128, "displayName": "会員ID"},
+                    {"name": "name", "type": "text", "size": 128, "displayName": "名前"},
+                    {"name": "email", "type": "email", "size": 256, "displayName": "メールアドレス"},
+                    {"name": "phone", "type": "phone", "size": 19, "displayName": "電話番号"},
+                    {"name": "address", "type": "textarea", "size": 1024, "displayName": "住所"},
+                    {"name": "join_date", "type": "date", "size": 4, "displayName": "入会日"}
+                ]
             }
         else:
             data = {
