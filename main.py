@@ -118,11 +118,10 @@ def main():
                     
                     # コード実行
                     with st.spinner("APIを実行中..."):
-                        response = execute_code(
-                            generated_code,
-                            st.session_state.api_endpoint,
-                            st.session_state.api_key
-                        )
+                        # 生成されたコードをローカル変数として実行
+                        local_vars = {}
+                        exec(generated_code, {"executor": executor, "result": None}, local_vars)
+                        response = local_vars.get("result")
                     
                     # レスポンスの処理
                     if isinstance(response, dict) and response.get("status") == "waiting_input":

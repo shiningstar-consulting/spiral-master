@@ -85,22 +85,17 @@ def execute_code(code: str, endpoint: str, api_key: str) -> Dict[str, Any]:
         # 実行環境の準備
         executor = SPIRALAPIExecutor(endpoint, api_key)
         
-        # グローバル環境とローカル環境を準備
-        global_env = {
-            "executor": executor,
-            "requests": requests,
-            "json": json
-        }
-        local_env = {}
+        # ローカル環境を準備
+        local_vars = {}
         
-        # コードの実行
-        exec(code, global_env, local_env)
+        # コードを実行
+        exec(code, {"executor": executor, "result": None}, local_vars)
         
         # 実行結果を取得
-        if "result" in local_env:
-            return local_env["result"]
+        if "result" in local_vars:
+            return local_vars["result"]
         else:
-            raise Exception("コードの実行結果が見つかりません。'result'変数に結果を代入してください。")
+            raise Exception("実行結果が見つかりません。コードに問題がある可能性があります。")
             
     except SyntaxError as e:
         raise Exception(f"コードの構文エラー: {str(e)}")
