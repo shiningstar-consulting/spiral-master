@@ -59,17 +59,17 @@ def main():
         # パラメータ入力の場合
         if st.session_state.current_code and prompt.strip():
             param_name = list(st.session_state.required_params.keys())[0]
-            st.session_state.required_params[param_name] = prompt.strip()
             
             # アシスタントの応答を生成
             with st.chat_message("assistant"):
                 try:
                     # SPIRALAPIExecutorのインスタンスを作成
                     executor = SPIRALAPIExecutor(st.session_state.api_endpoint, st.session_state.api_key)
+                    # グローバル変数に値を設定
+                    globals()[param_name] = prompt.strip()
                     # コードを実行
-                    exec(f"{param_name} = '{prompt.strip()}'", globals())
                     local_vars = {}
-                    exec(st.session_state.current_code, {"executor": executor, "result": None}, local_vars)
+                    exec(st.session_state.current_code, {"executor": executor, "result": None, param_name: prompt.strip()}, local_vars)
                     response = local_vars.get("result")
                     
                     # レスポンスの処理
@@ -87,11 +87,20 @@ def main():
                         formatted_response = format_response(response)
                         st.markdown("### 実行結果:")
                         st.json(formatted_response)
+                        
+                        # 状態をクリア
                         st.session_state.current_code = None
                         st.session_state.required_params = {}
+                        
+                        # グローバル変数から入力パラメータをクリア
+                        if param_name in globals():
+                            del globals()[param_name]
+                        
+                        # 完了メッセージを表示
+                        completion_message = "データベースの作成が完了しました。" if "success" in formatted_response["status"] else "処理が完了しましたが、エラーが発生しました。"
                         st.session_state.messages.append({
                             "role": "assistant",
-                            "content": "処理が完了しました。",
+                            "content": completion_message,
                             "response": formatted_response
                         })
                         
