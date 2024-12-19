@@ -68,13 +68,15 @@ def main():
                 st.code(final_message["code"], language="python")
                 # 実行ボタンを表示
                 button_key = f"execute_{len(st.session_state.messages)}_{int(time.time())}"
-                if st.button("このコードを実行する", key=button_key):
+                if st.button("このコードを実行する", key=button_key, use_container_width=True):
                     with st.spinner("APIを実行中..."):
                         try:
                             executor = SPIRALAPIExecutor(st.session_state.api_endpoint, st.session_state.api_key)
                             local_vars = {"st": st}
                             exec(final_message["code"], {"executor": executor, "st": st, "result": None}, local_vars)
                             response = local_vars.get("result")
+                            st.session_state.current_code = None
+                            st.session_state.required_params = {}
                             
                             # レスポンスを整形
                             formatted_response = format_response(response)
@@ -106,16 +108,21 @@ def main():
                     if 'params' not in st.session_state:
                         st.session_state.params = {}
                     
-                    # パラメータの保存
+                    # パラメータの保存と次のパラメータの設定
                     if st.session_state.required_params:
                         param_name = list(st.session_state.required_params.keys())[0]
                         param_value = prompt.strip()
                         st.session_state[param_name] = param_value
+                        if 'params' not in st.session_state:
+                            st.session_state.params = {}
                         st.session_state.params[param_name] = param_value
                     
                     # 変数の初期化
                     updated_code = st.session_state.current_code
                     modified_code = None
+                    
+                    # 既存の最終メッセージを削除
+                    st.session_state.messages = [m for m in st.session_state.messages if not m.get("is_final")]
 
                     if st.session_state.required_params:
                         # パラメータ入力の処理
@@ -171,14 +178,16 @@ def main():
                                 "role": "assistant",
                                 "content": message
                             })
+                            return
                         elif "db_name" in current_code and not st.session_state.get("db_name"):
-                            message = "データベース名を入力してください。"
+                            message = "データベース名を入力してください。自動生成する場合は「自動生成」と入力してください。"
                             st.info(message)
                             st.session_state.required_params = {"db_name": None}
                             st.session_state.messages.append({
                                 "role": "assistant",
                                 "content": message
                             })
+                            return
                         else:
                             # すべてのパラメータが揃っている場合、実行準備完了
                             final_message = {
