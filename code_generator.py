@@ -24,27 +24,16 @@ Rules for code generation:
 7. All messages to users must be in Japanese
 8. Keep indentation consistent
 
-Basic code structure:
+Basic code structure for database operations:
 result = None
 
-if '[parameter]' not in globals():
+if 'app_id' not in globals():
     result = {
         "status": "waiting_input",
-        "message": "[Japanese message here]",
-        "required_params": ["[parameter]"]
+        "message": "アプリIDを入力してください。",
+        "required_params": ["app_id"]
     }
-else:
-    try:
-        # API call here
-        response = executor.execute_request(...)
-        result = {"status": "success", "data": response}
-    except Exception as e:
-        result = {"status": "error", "error": str(e)}
-
-For database operations, always include auto-generation option:
-result = None
-
-if 'db_name' not in globals():
+elif 'db_name' not in globals():
     result = {
         "status": "waiting_input",
         "message": "データベース名を入力してください。自動生成する場合は「自動生成」と入力してください。",
@@ -67,7 +56,7 @@ else:
         
         response = executor.execute_request(
             method="POST",
-            path="apps/dbs",
+            path=f"apps/{app_id}/dbs",
             data=data
         )
         result = {"status": "success", "data": response}
