@@ -94,13 +94,16 @@ def main():
                     if 'params' not in st.session_state:
                         st.session_state.params = {}
                     
+                    # 変数の初期化
+                    updated_code = st.session_state.current_code
+                    modified_code = None
+
                     if st.session_state.required_params:
                         # パラメータ入力の処理
                         param_name = list(st.session_state.required_params.keys())[0]
                         st.session_state.params[param_name] = prompt.strip()
                         
                         # コード内のプレースホルダーを実際の値で置換
-                        updated_code = st.session_state.current_code
                         for param, value in st.session_state.params.items():
                             updated_code = updated_code.replace(f'"{param}"', f'"{value}"')
                         
@@ -131,7 +134,8 @@ def main():
                             "is_final": True
                         })
                     
-                    st.session_state.current_code = updated_code if st.session_state.required_params else modified_code
+                    # 現在のコードを更新
+                    st.session_state.current_code = modified_code if modified_code is not None else updated_code
                     
                     # レスポンスの処理
                     try:
