@@ -1,5 +1,6 @@
 import json
 import os
+import streamlit as st
 from openai import OpenAI
 from typing import Dict, Any
 
@@ -62,6 +63,8 @@ elif not st.session_state.get('db_name'):
     }
 else:
     try:
+        db_name = st.session_state['db_name']
+        app_id = st.session_state['app_id']
         if db_name == "自動生成":
             data = {
                 "name": "members_db",
