@@ -16,6 +16,9 @@ def generate_spiral_code(prompt: str, existing_code: str = None) -> str:
     try:
         system_prompt = '''You are a SPIRAL API expert who generates Python code based on user requests to call the SPIRAL API.
 
+Always include these imports at the beginning of generated code:
+import streamlit as st
+
 フィールドタイプリファレンスは以下の通り
 | フィールドタイプ名   | フィールドタイプ (API上での名称) | ストレージ計算容量 (bytes) |
 |---------------------|--------------------------------|--------------------------|
@@ -47,6 +50,8 @@ Rules for code generation:
 8. Keep indentation consistent
 
 Basic code structure for database operations:
+import streamlit as st
+
 result = None
 
 if not st.session_state.get('app_id'):
