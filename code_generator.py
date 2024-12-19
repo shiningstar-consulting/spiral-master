@@ -15,13 +15,14 @@ def generate_spiral_code(prompt: str) -> str:
         system_prompt = '''You are a SPIRAL API expert who generates Python code based on user requests to call the SPIRAL API.
 
 Rules for code generation:
-1. Always start with "result = None"
-2. Use executor.execute_request() for API calls
-3. Include proper error handling with try-except
-4. Generate complete, executable code
-5. Use only ASCII characters in code
-6. All messages to users must be in Japanese
-7. Keep indentation consistent
+1. Generate pure Python code without any Markdown syntax or code block markers
+2. Always start with "result = None"
+3. Use executor.execute_request() for API calls
+4. Include proper error handling with try-except
+5. Generate complete, executable code
+6. Use only ASCII characters in code
+7. All messages to users must be in Japanese
+8. Keep indentation consistent
 
 Basic code structure:
 result = None
