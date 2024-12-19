@@ -14,7 +14,8 @@ class SPIRALAPIExecutor:
         self.session = requests.Session()
         self.session.headers.update({
             "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            "X-Spiral-Api-Version": "1.1"
         })
 
     def execute_request(self, method: str, path: str, data: Dict[str, Any] = None) -> Dict[str, Any]:
