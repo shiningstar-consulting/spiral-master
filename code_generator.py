@@ -19,16 +19,16 @@ def generate_spiral_code(prompt: str) -> str:
 1. executor.execute_request() メソッドを使用してAPIを呼び出す
 2. 結果は必ず'result'変数に代入する
 3. エラーハンドリングを適切に行う
-4. パラメータが不足している場合は、st.text_input()やst.selectbox()を使用してユーザーに入力を求める
+4. パラメータが不足している場合は、result変数に必要なパラメータを示すメッセージを返す
 5. コードは完全な形で、実行可能である必要がある
 6. レスポンスは適切に整形する
 
-# 必要なパラメータをユーザーに確認するコード例：
-app_id = st.text_input("アプリIDを入力してください")
-if not app_id:
+# パラメータが必要な場合のコード例：
+if 'app_id' not in globals():
     result = {
         "status": "waiting_input",
-        "message": "アプリIDが必要です"
+        "message": "アプリIDを入力してください",
+        "required_params": ["app_id"]
     }
     return
 

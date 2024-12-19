@@ -14,6 +14,11 @@ st.set_page_config(
 def main():
     initialize_session_state()
     
+    if 'current_code' not in st.session_state:
+        st.session_state.current_code = None
+    if 'required_params' not in st.session_state:
+        st.session_state.required_params = {}
+    
     st.title("SPIRAL API アシスタント 🤖")
     
     # サイドバーにAPI設定を表示
@@ -43,8 +48,6 @@ def main():
                     st.json(message["response"])
                 else:
                     st.text(message["response"])
-            if "waiting_input" in message:
-                st.info("⚠️ 追加の入力が必要です")
 
     # ユーザー入力
     if prompt := st.chat_input("SPIRALに実行したい操作を入力してください"):
@@ -53,65 +56,104 @@ def main():
             st.markdown(prompt)
             st.session_state.messages.append({"role": "user", "content": prompt})
 
-        # アシスタントの応答を生成
-        with st.chat_message("assistant"):
-            response_placeholder = st.empty()
+        # パラメータ入力の場合
+        if st.session_state.current_code and prompt.strip():
+            param_name = list(st.session_state.required_params.keys())[0]
+            st.session_state.required_params[param_name] = prompt.strip()
             
-            try:
-                # コード生成中のスピナー表示
-                with st.spinner("コードを生成中..."):
-                    generated_code = generate_spiral_code(prompt)
-                
-                response_placeholder.markdown("生成されたコードです:")
-                st.code(generated_code, language="python")
-
-                # 実行ボタン
-                if st.button("コードを実行", key="execute"):
-                    try:
-                        with st.spinner("APIを実行中..."):
-                            response = execute_code(
-                                generated_code,
-                                st.session_state.api_endpoint,
-                                st.session_state.api_key
-                            )
-                        
-                        # レスポンスの処理
-                        if isinstance(response, dict) and response.get("status") == "waiting_input":
-                            # 追加入力が必要な場合
-                            st.info(response.get("message", "追加の入力が必要です"))
-                            st.session_state.messages.append({
-                                "role": "assistant",
-                                "content": "追加の入力が必要です",
-                                "code": generated_code,
-                                "waiting_input": True
-                            })
-                        else:
-                            # 通常のレスポンス
-                            formatted_response = format_response(response)
-                            st.markdown("### 実行結果:")
-                            st.json(formatted_response)
-                            
-                            st.session_state.messages.append({
-                                "role": "assistant",
-                                "content": "コードを生成し実行しました。",
-                                "code": generated_code,
-                                "response": formatted_response
-                            })
-                        
-                    except Exception as e:
-                        st.error(f"エラーが発生しました: {str(e)}")
+            # アシスタントの応答を生成
+            with st.chat_message("assistant"):
+                try:
+                    # コードを実行
+                    exec(f"{param_name} = '{prompt.strip()}'", globals())
+                    response = execute_code(
+                        st.session_state.current_code,
+                        st.session_state.api_endpoint,
+                        st.session_state.api_key
+                    )
+                    
+                    # レスポンスの処理
+                    if isinstance(response, dict) and response.get("status") == "waiting_input":
+                        # まだ追加のパラメータが必要な場合
+                        message = response.get("message", "追加の入力が必要です")
+                        st.info(message)
+                        st.session_state.required_params = {p: None for p in response.get("required_params", [])}
                         st.session_state.messages.append({
                             "role": "assistant",
-                            "content": f"エラーが発生しました: {str(e)}",
+                            "content": message
+                        })
+                    else:
+                        # 実行完了
+                        formatted_response = format_response(response)
+                        st.markdown("### 実行結果:")
+                        st.json(formatted_response)
+                        st.session_state.current_code = None
+                        st.session_state.required_params = {}
+                        st.session_state.messages.append({
+                            "role": "assistant",
+                            "content": "処理が完了しました。",
+                            "response": formatted_response
+                        })
+                        
+                except Exception as e:
+                    st.error(f"エラーが発生しました: {str(e)}")
+                    st.session_state.messages.append({
+                        "role": "assistant",
+                        "content": f"エラーが発生しました: {str(e)}"
+                    })
+                    st.session_state.current_code = None
+                    st.session_state.required_params = {}
+        
+        # 新しいコマンドの場合
+        else:
+            # アシスタントの応答を生成
+            with st.chat_message("assistant"):
+                try:
+                    # コード生成中のスピナー表示
+                    with st.spinner("コードを生成中..."):
+                        generated_code = generate_spiral_code(prompt)
+                    
+                    st.markdown("生成されたコードです:")
+                    st.code(generated_code, language="python")
+                    
+                    # コード実行
+                    with st.spinner("APIを実行中..."):
+                        response = execute_code(
+                            generated_code,
+                            st.session_state.api_endpoint,
+                            st.session_state.api_key
+                        )
+                    
+                    # レスポンスの処理
+                    if isinstance(response, dict) and response.get("status") == "waiting_input":
+                        # パラメータ入力が必要な場合
+                        message = response.get("message", "追加の入力が必要です")
+                        st.info(message)
+                        st.session_state.current_code = generated_code
+                        st.session_state.required_params = {p: None for p in response.get("required_params", [])}
+                        st.session_state.messages.append({
+                            "role": "assistant",
+                            "content": message,
                             "code": generated_code
                         })
-                
-            except Exception as e:
-                st.error(f"コード生成に失敗しました: {str(e)}")
-                st.session_state.messages.append({
-                    "role": "assistant",
-                    "content": f"コード生成に失敗しました: {str(e)}"
-                })
+                    else:
+                        # 実行完了
+                        formatted_response = format_response(response)
+                        st.markdown("### 実行結果:")
+                        st.json(formatted_response)
+                        st.session_state.messages.append({
+                            "role": "assistant",
+                            "content": "処理が完了しました。",
+                            "code": generated_code,
+                            "response": formatted_response
+                        })
+                    
+                except Exception as e:
+                    st.error(f"エラーが発生しました: {str(e)}")
+                    st.session_state.messages.append({
+                        "role": "assistant",
+                        "content": f"エラーが発生しました: {str(e)}"
+                    })
 
 if __name__ == "__main__":
     main()
