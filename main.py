@@ -37,17 +37,47 @@ def main():
     # メインエリアにチャットインターフェースを表示
     st.header("チャット")
     
+    # 実行確認ボタンの状態管理
+    if 'show_execute_button' not in st.session_state:
+        st.session_state.show_execute_button = False
+    if 'final_code' not in st.session_state:
+        st.session_state.final_code = None
+    
     # チャット履歴の表示
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
             if "code" in message:
                 st.code(message["code"], language="python")
+                if message.get("is_final", False):
+                    st.session_state.show_execute_button = True
+                    st.session_state.final_code = message["code"]
             if "response" in message:
                 if isinstance(message["response"], dict):
                     st.json(message["response"])
                 else:
                     st.text(message["response"])
+    
+    # 実行確認ボタンの表示
+    if st.session_state.show_execute_button and st.session_state.final_code:
+        if st.button("このコードを実行する"):
+            with st.spinner("APIを実行中..."):
+                try:
+                    executor = SPIRALAPIExecutor(st.session_state.api_endpoint, st.session_state.api_key)
+                    local_vars = {}
+                    exec(st.session_state.final_code, {"executor": executor, "result": None}, local_vars)
+                    response = local_vars.get("result")
+                    formatted_response = format_response(response)
+                    st.session_state.messages.append({
+                        "role": "assistant",
+                        "content": "実行が完了しました。",
+                        "response": formatted_response
+                    })
+                    st.session_state.show_execute_button = False
+                    st.session_state.final_code = None
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"実行エラー: {str(e)}")
 
     # ユーザー入力
     if prompt := st.chat_input("SPIRALに実行したい操作を入力してください"):
@@ -56,37 +86,52 @@ def main():
             st.markdown(prompt)
             st.session_state.messages.append({"role": "user", "content": prompt})
 
-        # パラメータ入力の場合
+        # パラメータ入力または修正要求の場合
         if st.session_state.current_code and prompt.strip():
-            param_name = list(st.session_state.required_params.keys())[0]
-            
             # アシスタントの応答を生成
             with st.chat_message("assistant"):
                 try:
-                    # SPIRALAPIExecutorのインスタンスを作成
-                    executor = SPIRALAPIExecutor(st.session_state.api_endpoint, st.session_state.api_key)
-                
-                    # 現在のパラメータを保存
                     if 'params' not in st.session_state:
                         st.session_state.params = {}
-                    st.session_state.params[param_name] = prompt.strip()
-                
-                    # コンテキストを維持するため、以前の実行結果も保持
-                    if 'execution_context' not in st.session_state:
-                        st.session_state.execution_context = {}
                     
-                    # 実行環境の準備（以前のコンテキストを維持）
-                    exec_globals = {
-                        "executor": executor,
-                        "result": None,
-                        **st.session_state.execution_context,
-                        **st.session_state.params
-                    }
-                
-                    # コードを実行
-                    local_vars = {}
-                    exec(st.session_state.current_code, exec_globals, local_vars)
-                    response = local_vars.get("result")
+                    if st.session_state.required_params:
+                        # パラメータ入力の処理
+                        param_name = list(st.session_state.required_params.keys())[0]
+                        st.session_state.params[param_name] = prompt.strip()
+                        
+                        # コード内のプレースホルダーを実際の値で置換
+                        updated_code = st.session_state.current_code
+                        for param, value in st.session_state.params.items():
+                            updated_code = updated_code.replace(f'"{param}"', f'"{value}"')
+                        
+                        st.markdown("パラメータを適用したコードです:")
+                        st.code(updated_code, language="python")
+                        
+                        # まだ必要なパラメータが残っているか確認
+                        st.session_state.required_params.pop(param_name)
+                        if st.session_state.required_params:
+                            next_param = list(st.session_state.required_params.keys())[0]
+                            st.info(f"{next_param}を入力してください。")
+                        else:
+                            st.session_state.messages.append({
+                                "role": "assistant",
+                                "content": "全てのパラメータが入力されました。このコードを実行してよろしいですか？",
+                                "code": updated_code,
+                                "is_final": True
+                            })
+                    else:
+                        # 修正要求の処理
+                        st.markdown("修正要求を反映したコードを生成します...")
+                        modified_code = generate_spiral_code(prompt)
+                        st.code(modified_code, language="python")
+                        st.session_state.messages.append({
+                            "role": "assistant",
+                            "content": "コードを修正しました。このコードを実行してよろしいですか？",
+                            "code": modified_code,
+                            "is_final": True
+                        })
+                    
+                    st.session_state.current_code = updated_code if st.session_state.required_params else modified_code
                     
                     # レスポンスの処理
                     if isinstance(response, dict) and response.get("status") == "waiting_input":

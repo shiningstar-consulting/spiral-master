@@ -7,9 +7,10 @@ from typing import Dict, Any
 # do not change this unless explicitly requested by the user
 client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
-def generate_spiral_code(prompt: str) -> str:
+def generate_spiral_code(prompt: str, existing_code: str = None) -> str:
     """
     Generate Python code to execute SPIRAL API based on user prompt
+    If existing_code is provided, modify it according to the prompt
     """
     try:
         system_prompt = '''You are a SPIRAL API expert who generates Python code based on user requests to call the SPIRAL API.
@@ -61,31 +62,26 @@ elif 'db_name' not in globals():
     }
 else:
     try:
-        # 基本的なフィールド定義
-        default_fields = [
-            {"name": "member_id", "type": "text", "size": 128, "displayName": "会員ID"},
-            {"name": "name", "type": "text", "size": 128, "displayName": "名前"},
-            {"name": "email", "type": "email", "size": 256, "displayName": "メールアドレス"},
-            {"name": "phone", "type": "phone", "size": 19, "displayName": "電話番号"},
-            {"name": "address", "type": "textarea", "size": 1024, "displayName": "住所"},
-            {"name": "join_date", "type": "date", "size": 4, "displayName": "入会日"}
-        ]
-
-        # データベース定義の作成
         if db_name == "自動生成":
-            db_name = "members_db"
-            display_name = "会員データベース"
-            description = "会員情報を管理するデータベース"
+            data = {
+                "name": "members_db",
+                "displayName": "会員データベース",
+                "description": "会員情報を管理するデータベース",
+                "fields": [
+                    {"name": "member_id", "type": "text", "size": 128, "displayName": "会員ID"},
+                    {"name": "name", "type": "text", "size": 128, "displayName": "名前"},
+                    {"name": "email", "type": "email", "size": 256, "displayName": "メールアドレス"},
+                    {"name": "phone", "type": "phone", "size": 19, "displayName": "電話番号"},
+                    {"name": "address", "type": "textarea", "size": 1024, "displayName": "住所"},
+                    {"name": "join_date", "type": "date", "size": 4, "displayName": "入会日"}
+                ]
+            }
         else:
-            display_name = f"{db_name}データベース"
-            description = f"{db_name}のデータを管理するデータベース"
-
-        data = {
-            "name": db_name,
-            "displayName": display_name,
-            "description": description,
-            "fields": default_fields
-        }
+            data = {
+                "name": db_name,
+                "displayName": f"{db_name}",
+                "description": f"{db_name}のデータを管理するデータベース"
+            }
         
         response = executor.execute_request(
             method="POST",
