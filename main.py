@@ -86,7 +86,10 @@ def main():
                                 local_vars = {"st": st}
                                 exec(st.session_state.final_code, {"executor": executor, "st": st, "result": None}, local_vars)
                                 response = local_vars.get("result", {})
+                                if not isinstance(response, dict):
+                                    response = {"data": response}
                                 formatted_response = format_response(response)
+                                st.session_state.messages = [m for m in st.session_state.messages if not m.get("is_final")]
                                 st.session_state.messages.append({
                                     "role": "assistant",
                                     "content": "実行が完了しました。",
@@ -137,11 +140,13 @@ def main():
                         st.session_state.required_params.pop(param_name)
                         if st.session_state.required_params:
                             next_param = list(st.session_state.required_params.keys())[0]
+                            st.session_state.messages = [m for m in st.session_state.messages if not m.get("is_final")]
                             st.session_state.messages.append({
                                 "role": "assistant",
                                 "content": f"{next_param}を入力してください。"
                             })
                         else:
+                            st.session_state.messages = [m for m in st.session_state.messages if not m.get("is_final")]
                             st.session_state.messages.append({
                                 "role": "assistant",
                                 "content": "全てのパラメータが入力されました。このコードを実行してよろしいですか？",
