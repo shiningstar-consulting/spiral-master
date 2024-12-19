@@ -51,13 +51,18 @@ def main():
             st.session_state.final_code = message["code"]
             break
     
-    # 通常のメッセージと最終メッセージを分離
+    # 通常のメッセージを表示
+    messages_to_display = []
     final_message = None
-    for i, message in enumerate(st.session_state.messages):
+    
+    for message in st.session_state.messages:
         if message.get("is_final", False):
             final_message = message
-            continue
-        
+        else:
+            messages_to_display.append(message)
+    
+    # 通常のメッセージを表示
+    for message in messages_to_display:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
             if "response" in message:
@@ -78,8 +83,12 @@ def main():
                         with st.spinner("APIを実行中..."):
                             try:
                                 executor = SPIRALAPIExecutor(st.session_state.api_endpoint, st.session_state.api_key)
-                                local_vars = {}
-                                exec(st.session_state.final_code, {"executor": executor, "result": None}, local_vars)
+                                local_vars = {"st": st}
+                                code_to_exec = f"""
+import streamlit as st
+{st.session_state.final_code}
+"""
+                                exec(code_to_exec, {"executor": executor, "st": st, "result": None}, local_vars)
                                 response = local_vars.get("result")
                                 formatted_response = format_response(response)
                                 st.session_state.messages.append({
@@ -89,7 +98,7 @@ def main():
                                 })
                                 st.session_state.show_execute_button = False
                                 st.session_state.final_code = None
-                                st.rerun()
+                                st.experimental_rerun()
                             except Exception as e:
                                 st.error(f"実行エラー: {str(e)}")
 
