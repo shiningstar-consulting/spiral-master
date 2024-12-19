@@ -87,7 +87,7 @@ def main():
                                 "response": formatted_response
                             })
                             
-                            st.experimental_rerun()
+                            st.rerun()
                         except Exception as e:
                             st.error(f"実行エラー: {str(e)}")
     
@@ -130,20 +130,18 @@ def main():
                         st.session_state.required_params.pop(param_name)
                         if st.session_state.required_params:
                             next_param = list(st.session_state.required_params.keys())[0]
-                            st.session_state.messages = [m for m in st.session_state.messages if not m.get("is_final")]
                             st.session_state.messages.append({
                                 "role": "assistant",
                                 "content": f"{next_param}を入力してください。"
                             })
                         else:
-                            st.session_state.messages = [m for m in st.session_state.messages if not m.get("is_final")]
                             st.session_state.messages.append({
                                 "role": "assistant",
                                 "content": "全てのパラメータが入力されました。このコードを実行してよろしいですか？",
                                 "code": updated_code,
                                 "is_final": True
                             })
-                            st.experimental_rerun()
+                            st.rerun()
                     else:
                         # 修正要求の処理
                         modified_code = generate_spiral_code(prompt)
