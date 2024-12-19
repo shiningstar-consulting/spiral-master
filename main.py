@@ -41,12 +41,12 @@ def main():
     # チャットインターフェースの設定
     st.header("チャット")
     
-    # メッセージを分類
+    # メッセージを分類して表示
     regular_messages = []
     final_message = None
     
     for message in st.session_state.messages:
-        if message.get("is_final"):
+        if message.get("is_final", False):
             final_message = message
         else:
             regular_messages.append(message)
@@ -66,6 +66,7 @@ def main():
             st.write(final_message["content"])
             if "code" in final_message:
                 st.code(final_message["code"], language="python")
+                # 実行ボタンを表示
                 button_key = f"execute_{len(st.session_state.messages)}_{int(time.time())}"
                 if st.button("このコードを実行する", key=button_key):
                     with st.spinner("APIを実行中..."):
@@ -181,12 +182,13 @@ def main():
                             })
                         else:
                             # すべてのパラメータが揃っている場合、実行準備完了
-                            st.session_state.messages.append({
+                            final_message = {
                                 "role": "assistant",
                                 "content": "全てのパラメータが入力されました。このコードを実行してよろしいですか？",
                                 "code": current_code,
                                 "is_final": True
-                            })
+                            }
+                            st.session_state.messages.append(final_message)
                             
                     except Exception as e:
                         st.error(f"コードの検証中にエラーが発生しました: {str(e)}")
