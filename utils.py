@@ -26,39 +26,50 @@ def format_response(response: Dict[str, Any]) -> Dict[str, Any]:
     APIレスポンスを見やすく整形
     """
     try:
-        # 文字列の場合はJSONとしてパース
+        # Noneの場合
+        if response is None:
+            return {
+                "status": "success",
+                "data": None
+            }
+            
+        # 文字列の場合
         if isinstance(response, str):
-            try:
-                response = json.loads(response)
-            except json.JSONDecodeError:
-                # JSON解析に失敗した場合は文字列としてそのまま扱う
-                response = {"message": response}
-        
-        # 辞書でない場合は辞書に変換
+            return {
+                "status": "success",
+                "data": response
+            }
+            
+        # 辞書以外の場合
         if not isinstance(response, dict):
-            response = {"data": response}
+            return {
+                "status": "success",
+                "data": response
+            }
         
         # エラーレスポンスの場合
         if "error" in response:
             return {
                 "status": "error",
-                "error": str(response["error"]),
-                "details": str(response.get("details", "No additional details"))
+                "error": str(response["error"])
             }
         
         # 待機レスポンスの場合
-        if "status" in response and response["status"] == "waiting_input":
-            return response
+        if response.get("status") == "waiting_input":
+            return {
+                "status": "waiting_input",
+                "message": response.get("message", "入力待ち"),
+                "required_params": response.get("required_params", [])
+            }
         
-        # 成功レスポンスの場合
+        # 通常のレスポンスの場合
         return {
             "status": "success",
-            "data": response.get("data", response)
+            "data": response
         }
         
     except Exception as e:
         return {
             "status": "error",
-            "error": f"Response formatting error: {str(e)}",
-            "data": str(response)
+            "error": str(e)
         }

@@ -13,12 +13,15 @@ st.set_page_config(
 )
 
 def main():
-    initialize_session_state()
-    
-    if 'current_code' not in st.session_state:
+    # セッション状態の初期化
+    if 'initialized' not in st.session_state:
+        initialize_session_state()
         st.session_state.current_code = None
-    if 'required_params' not in st.session_state:
         st.session_state.required_params = {}
+        st.session_state.messages = []
+        st.session_state.show_execute_button = False
+        st.session_state.final_code = None
+        st.session_state.initialized = True
     
     st.title("SPIRAL API アシスタント 🤖")
     
@@ -35,79 +38,18 @@ def main():
                      type="password",
                      help="SPIRAL APIキーを入力してください")
     
-    # メインエリアにチャットインターフェースを表示
+    # チャットインターフェースの設定
     st.header("チャット")
     
-    # 実行確認ボタンの状態管理
-    if 'show_execute_button' not in st.session_state:
-        st.session_state.show_execute_button = False
-    if 'final_code' not in st.session_state:
-        st.session_state.final_code = None
-    
-    # 実行ボタンの状態を更新
-    for message in reversed(st.session_state.messages):
-        if "code" in message and message.get("is_final", False):
-            st.session_state.show_execute_button = True
-            st.session_state.final_code = message["code"]
-            break
-    
-    # 通常のメッセージを表示
-    messages_to_display = []
-    final_message = None
-    
+    # メッセージ履歴の表示
     for message in st.session_state.messages:
-        if message.get("is_final", False):
-            final_message = message
-        else:
-            messages_to_display.append(message)
-    
-    # 通常のメッセージを表示
-    for message in messages_to_display:
         with st.chat_message(message["role"]):
-            st.markdown(message["content"])
+            st.write(message["content"])
+            if "code" in message:
+                st.code(message["code"], language="python")
             if "response" in message:
-                if isinstance(message["response"], dict):
-                    st.json(message["response"])
-                else:
-                    st.text(message["response"])
+                st.json(message["response"])
     
-    # 最終メッセージとコードを最後に表示
-    if final_message:
-        with st.chat_message(final_message["role"]):
-            st.markdown(final_message["content"])
-            if "code" in final_message:
-                st.code(final_message["code"], language="python")
-                if st.session_state.show_execute_button:
-                    button_key = f"execute_{len(st.session_state.messages)}_{int(time.time())}"
-                    if st.button("このコードを実行する", key=button_key):
-                        with st.spinner("APIを実行中..."):
-                            try:
-                                executor = SPIRALAPIExecutor(st.session_state.api_endpoint, st.session_state.api_key)
-                                local_vars = {"st": st}
-                                exec(st.session_state.final_code, {"executor": executor, "st": st, "result": None}, local_vars)
-                                response = local_vars.get("result")
-                                
-                                # レスポンスを整形
-                                if response is None:
-                                    formatted_response = {"status": "success", "data": "No response"}
-                                else:
-                                    formatted_response = format_response(response)
-                                
-                                # 最終メッセージを削除して新しいメッセージを追加
-                                st.session_state.messages = [m for m in st.session_state.messages if not m.get("is_final")]
-                                st.session_state.messages.append({
-                                    "role": "assistant",
-                                    "content": "実行が完了しました。",
-                                    "response": formatted_response
-                                })
-                                
-                                # 実行完了フラグをリセット
-                                st.session_state.show_execute_button = False
-                                st.session_state.final_code = None
-                                st.experimental_rerun()
-                            except Exception as e:
-                                st.error(f"実行エラー: {str(e)}")
-
     # ユーザー入力
     if prompt := st.chat_input("SPIRALに実行したい操作を入力してください"):
         # ユーザーのメッセージを表示
