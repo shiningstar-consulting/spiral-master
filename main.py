@@ -2,7 +2,7 @@ import streamlit as st
 import json
 import time
 from code_generator import generate_spiral_code
-from spiral_api import SPIRALAPIExecutor, execute_code # Assuming execute_code is defined in spiral_api.py
+from spiral_api import SPIRALAPIExecutor
 from utils import format_response, initialize_session_state
 import logging
 
@@ -34,12 +34,13 @@ def remove_final_messages():
 
 def execute_api_code(code):
     """APIコードを実行する"""
-    logger.info("API実行開始")
+    logger.info(f"API実行開始: {code}")
     try:
+        # 実行環境の準備
         executor = SPIRALAPIExecutor(st.session_state.api_endpoint, st.session_state.api_key)
 
         # グローバル変数の設定
-        globals_dict = {
+        exec_globals = {
             "executor": executor,
             "st": st,
             "result": None,
@@ -49,19 +50,26 @@ def execute_api_code(code):
         }
 
         # ローカル変数の初期化
-        locals_dict = {}
+        exec_locals = {}
 
         logger.info("コード実行前")
-        exec(code, globals_dict, locals_dict)
+        # コードの実行
+        exec(code, exec_globals, exec_locals)
         logger.info("コード実行後")
 
-        result = locals_dict.get("result")
+        # 結果の取得
+        result = exec_locals.get("result")
         logger.info(f"実行結果: {result}")
 
+        if result is None:
+            logger.warning("実行結果がNoneです")
+            return {"status": "error", "message": "実行結果が取得できませんでした"}
+
         return result
+
     except Exception as e:
         logger.error(f"API実行エラー: {str(e)}")
-        raise
+        return {"status": "error", "error": str(e)}
 
 def display_messages():
     """セッション内のメッセージを表示"""
@@ -72,25 +80,15 @@ def display_messages():
                 st.code(message["code"], language="python")
                 if message.get("is_final"):
                     # 実行ボタンを表示
-                    button_key = f"execute_{len(st.session_state.messages)}_{int(time.time())}"
-
-                    # ボタンの状態を保存
-                    if button_key not in st.session_state:
-                        st.session_state[button_key] = False
+                    button_key = f"execute_{len(st.session_state.messages)}_{time.time()}"
 
                     if st.button("このコードを実行する", key=button_key, use_container_width=True):
-                        st.session_state[button_key] = True
-
-                    # ボタンが押された場合の処理
-                    if st.session_state[button_key]:
+                        logger.info(f"実行ボタンがクリックされました: {button_key}")
                         with st.spinner("APIを実行中..."):
                             try:
                                 # コードを実行
                                 response = execute_api_code(message["code"])
-
-                                # セッション状態を更新
-                                st.session_state.current_code = None
-                                st.session_state.required_params = {}
+                                logger.info(f"API実行完了: {response}")
 
                                 # レスポンスを整形
                                 formatted_response = format_response(response)
@@ -99,17 +97,16 @@ def display_messages():
                                 remove_final_messages()
                                 add_message("assistant", "実行結果:", response=formatted_response)
 
-                                # ボタンの状態をリセット
-                                st.session_state[button_key] = False
+                                # 状態をクリア
+                                st.session_state.current_code = None
+                                st.session_state.required_params = {}
 
-                                # 強制的にページを再読み込み
+                                # 画面を更新
                                 st.rerun()
 
                             except Exception as e:
                                 logger.error(f"実行エラー: {str(e)}")
                                 st.error(f"実行エラー: {str(e)}")
-                                # エラー時もボタンの状態をリセット
-                                st.session_state[button_key] = False
 
             if "response" in message:
                 st.json(message["response"])
