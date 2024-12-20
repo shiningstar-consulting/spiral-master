@@ -70,7 +70,7 @@ else:
     try:
         db_name = st.session_state['db_name']
         app_id = st.session_state['app_id']
-        if db_name == "自動生成":
+        if db_name == "${Provide an appropriate DB name in English based on the prompt}":
             data = {
                 "name": "members_db",
                 "displayName": "会員データベース",
